@@ -1,0 +1,120 @@
+1.	Join 
+Problem: The company wants to send out invitations to all employees whose job tittle ends in the word “ASSOCIATE” for a training which help them will become more efficient and productive.
+SELECT A.emp_num, emp_lname, emp_email, emp_title, dept_name
+FROM CH07_LargeCo_lgemployee A JOIN CH07_LargeCo_lgdepartment B ON A.dept_num=B.dept_num
+WHERE emp_title LIKE '%ASSOCIATE'
+ORDER BY dept_name, emp_title;
+Screenshot of output:
+ 
+Problem: Darell Hagan was not happy with his experience in the store with one of our staff so he wanted to get refund and wanted to meet our manager. So, the company wants to know what happened at that time, they want to talk with the manager and the employee. 
+SELECT A.emp_fname AS MANAGER_FNAME, A.emp_lname AS MANAGER_LNAME, B.dept_name, B.dept_phone,
+C.emp_fname AS EMPLOYEE_FNAME, C.emp_lname AS EMPLOYEE_LNAME, E.cust_fname AS CUSTOMER_FNAME,
+E.cust_lname as CUSTOMER_LANME, D.inv_date, D.inv_total AS INV_TOTAL
+
+FROM [CH07_LargeCo_lgemployee] A, [CH07_LargeCo_lgdepartment] B, 
+[CH07_LargeCo_lgemployee] C, [CH07_LargeCo_lginvoice] D, [CH07_LargeCo_lgcustomer] E
+
+WHERE B.emp_num = A.emp_num
+AND C.emp_num=D.employee_id
+AND B.dept_num=C.dept_num
+AND D.cust_code=E.cust_code
+AND E.cust_lname = 'Hagan'
+AND D.inv_date = '05-18-2017';
+
+Screenshot of output:
+ 
+2.	Subquery 
+Problem: The purchasing manager is still concerned about the impact of price on sales. 
+select A.brand_name, A.brand_type, B.prod_sku, B.prod_descript, B.prod_price
+from CH07_LargeCo_lgbrand A, CH07_LargeCo_lgproduct B
+where A.brand_id=B.brand_id
+and A.brand_type not like '%PREMIUM%'
+and B.prod_price > (select max(D.prod_price) 
+					from CH07_LargeCo_lgbrand C, CH07_LargeCo_lgproduct D
+					where C.brand_id=D.brand_id
+					and C.brand_type = 'PREMIUM') ;
+Screenshot of output:
+ 
+Problem:  The Binder Prime Company wants to recognize the employee who sold the most of
+its products during a specified period between November 1, 2017, and December 5, 2017.
+
+SELECT emp.emp_num, emp_fname, emp_lname, emp_email, total
+FROM CH07_LargeCo_lgemployee AS emp INNER JOIN
+ (SELECT employee_id, sum(line_qty) AS total
+ FROM CH07_LargeCo_lginvoice AS i INNER JOIN CH07_LargeCo_lgline as l ON i.inv_num = l.inv_num
+ INNER JOIN CH07_LargeCo_lgproduct AS p ON l.prod_sku = p.prod_sku
+ INNER JOIN CH07_LargeCo_lgbrand AS b ON b.brand_id = p.brand_id
+ WHERE brand_name = 'Binder Prime'
+ AND inv_date BETWEEN '2017-11-01' AND '2017-12-06'
+ GROUP BY employee_id) AS sub
+ON emp.emp_num = sub.employee_id
+WHERE total = (SELECT max(total)
+FROM (SELECT employee_id, sum(line_qty) AS total
+FROM CH07_LargeCo_lginvoice AS i INNER JOIN CH07_LargeCo_lgline as l ON i.inv_num = l.inv_num
+ INNER JOIN CH07_LargeCo_lgproduct AS p ON l.prod_sku = p.prod_sku
+ INNER JOIN CH07_LargeCo_lgbrand AS b ON b.brand_id = p.brand_id
+ WHERE brand_name = 'Binder Prime'
+ AND inv_date BETWEEN '2017-11-01' AND '2017-12-06'
+GROUP BY employee_id) as sub1)
+ORDER BY emp.emp_lname;
+Screenshot of output:
+
+ 
+3.	Subquery with Union
+Problem: The company is planning a new promotion in Alabama (AL) and wants to know about
+the largest purchases made by customers in that state. Even with some customers in AL have not bought anything from our store.
+select A.cust_code, A.cust_fname, A.cust_lname, A.cust_street, A.cust_city, A.cust_state, A.cust_zip, B.inv_date, B.inv_total as 'Largest Invoice'
+from CH07_LargeCo_lgcustomer A, CH07_LargeCo_lginvoice B
+where A.cust_code=B.cust_code
+and A.cust_state = 'AL'
+and B.inv_total= (select max(C.inv_total) from CH07_LargeCo_lginvoice C
+					where C.cust_code=A.cust_code)
+union 
+select A2.cust_code, A2.cust_fname, A2.cust_lname, A2.cust_street, A2.cust_city, A2.cust_state, A2.cust_zip, Null, 0
+from CH07_LargeCo_lgcustomer A2 
+where A2.cust_state = 'AL'
+and A2.cust_code not in (select B2.cust_code from CH07_LargeCo_lginvoice B2) 
+order by A.cust_lname, A.cust_fname;
+Screenshot of output:
+ 
+Problem: The company want to check new employees’ productivity, who has ID:  83649 and 83677.  
+select distinct X.cust_code, X.cust_fname, X.cust_lname
+from 
+(select A.cust_code, A.cust_fname, A.cust_lname 
+from CH07_LargeCo_lgcustomer A, CH07_LargeCo_lginvoice B
+where A.cust_code=B.cust_code
+and B.employee_id = 83649) as X,
+
+(select C.cust_code, C.cust_fname, C.cust_lname 
+from CH07_LargeCo_lgcustomer C, CH07_LargeCo_lginvoice D
+where C.cust_code=D.cust_code
+and D.employee_id = 83677) as Y
+where X.cust_code=Y.cust_code
+order by X.cust_lname, X.cust_fname;
+ 
+Screenshot of output:
+
+5.	Creating table, Altering table
+CREATE TABLE CUSTOMER (
+CUST_NUM     INTEGER PRIMARY KEY,
+CUST_LNAME   VARCHAR(30),
+CUST_FNAME   VARCHAR(30),
+CUST_BALANCE DECIMAL(8,2));
+INSERT INTO CUSTOMER VALUES ('1000', 'Smith', 'Jeanne', '1050.11');
+INSERT INTO CUSTOMER VALUES ('1001', 'Orlega', 'Juan', '840.92');
+ALTER TABLE CUSTOMER
+ADD CUST_DOB DATE;
+UPDATE CUSTOMER
+SET CUST_DOB = 'March 15,1989'
+WHERE CUST_NUM = 1000;
+UPDATE CUSTOMER
+SET CUST_DOB = 'December 22,1988'
+WHERE CUST_NUM = 1001;
+ 
+
+
+Problem: write the SQL command to add .15 to the EMP_PCT of the employee whose name is Maria D. Alonzo.
+UPDATE EMP_3
+SET EMP_PCT = (EMP_PCT + 0.15)
+WHERE EMP_LNAME='Alonzo',EMP_FNAME='Maria', EMP_INITIAL='D' ;
+
